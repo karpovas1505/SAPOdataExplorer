@@ -53,31 +53,29 @@ router.post('/', async (req, res, next) => {
        // Fix any issues with IWFND/IWBEP paths - handle double slashes and wrong prefixes
        let fixedUrl = url;
        
-       // Fix double slash after /sap/
-       fixedUrl = fixedUrl.replace('/sap//', '/sap/');
+       // Normalize the URL by removing any double slashes
+       while (fixedUrl.includes('//')) {
+         fixedUrl = fixedUrl.replace('//', '/');
+       }
        
-        // Fix /sap/opu/odata/sap/IWFND/ or /sap/opu/odata/sap//IWFND/ pattern
-        if (fixedUrl.includes('/sap/opu/odata/sap/IWFND/') || fixedUrl.includes('/sap/opu/odata/sap//IWFND/')) {
-          // Extract the service path and entity set
-          // For URLs like: /sap/opu/odata/sap//IWFND/SG_MED_CATALOG/ServiceCollection
-          // We want to extract: servicePath = "IWFND/SG_MED_CATALOG", entitySet = "ServiceCollection"
-          const iwfndMatch = fixedUrl.match(/\/sap\/opu\/odata\/sap\/([^\/]+(?:\/[^\/]+)*?)\/(.+)$/);
-          if (iwfndMatch) {
-            let servicePath = iwfndMatch[1]; // e.g., "IWFND/SG_MED_CATALOG" or "/IWFND/SG_MED_CATALOG"
-            // Remove leading slash if present (from the double slash case)
-            if (servicePath.startsWith('/')) {
-              servicePath = servicePath.substring(1);
-            }
-            const entitySet = iwfndMatch[2]; // e.g., "ServiceCollection"
-            fixedUrl = `/sap/opu/odata/${servicePath};v=2/${entitySet}`;
-          }
-        } else if (fixedUrl.startsWith('/sap/opu/odata/IWFND/CATALOGSERVICE') || fixedUrl.startsWith('/sap/opu/odata/IWBEP/')) {
-          // URL is already correctly formatted for IWFND/IWBEP services, use as-is
-          // Just ensure it has proper version if needed
-          if (!fixedUrl.includes(';v=') && fixedUrl.includes('/IWFND/CATALOGSERVICE')) {
-            fixedUrl = fixedUrl.replace('/IWFND/CATALOGSERVICE', '/IWFND/CATALOGSERVICE;v=2');
-          }
-        }
+       // Fix /sap/opu/odata/sap/IWFND/ or /sap/opu/odata/sap//IWFND/ pattern
+       if (fixedUrl.includes('/sap/opu/odata/sap/IWFND/')) {
+         // Extract the service path and entity set
+         // For URLs like: /sap/opu/odata/sap/IWFND/SG_MED_CATALOG/ServiceCollection
+         // We want to extract: servicePath = "IWFND/SG_MED_CATALOG", entitySet = "ServiceCollection"
+         const iwfndMatch = fixedUrl.match(/\/sap\/opu\/odata\/sap\/([^\/]+(?:\/[^\/]+)*?)\/(.+)$/);
+         if (iwfndMatch) {
+           let servicePath = iwfndMatch[1]; // e.g., "IWFND/SG_MED_CATALOG"
+           const entitySet = iwfndMatch[2]; // e.g., "ServiceCollection"
+           fixedUrl = `/sap/opu/odata/${servicePath};v=2/${entitySet}`;
+         }
+       } else if (fixedUrl.startsWith('/sap/opu/odata/IWFND/CATALOGSERVICE') || fixedUrl.startsWith('/sap/opu/odata/IWBEP/')) {
+         // URL is already correctly formatted for IWFND/IWBEP services, use as-is
+         // Just ensure it has proper version if needed
+         if (!fixedUrl.includes(';v=') && fixedUrl.includes('/IWFND/CATALOGSERVICE')) {
+           fixedUrl = fixedUrl.replace('/IWFND/CATALOGSERVICE', '/IWFND/CATALOGSERVICE;v=2');
+         }
+       }
        
        fullUrl = fixedUrl;
     } else if (url.startsWith('/IWFND/') || url.startsWith('/SAP/')) {
