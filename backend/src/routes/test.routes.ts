@@ -58,17 +58,28 @@ router.post('/', async (req, res, next) => {
          fixedUrl = fixedUrl.replace('//', '/');
        }
        
-       // Fix /sap/opu/odata/sap/IWFND/ or /sap/opu/odata/sap//IWFND/ pattern
-       if (fixedUrl.includes('/sap/opu/odata/sap/IWFND/')) {
-         // Extract the service path and entity set
-         // For URLs like: /sap/opu/odata/sap/IWFND/SG_MED_CATALOG/ServiceCollection
-         // We want to extract: servicePath = "IWFND/SG_MED_CATALOG", entitySet = "ServiceCollection"
-         const iwfndMatch = fixedUrl.match(/\/sap\/opu\/odata\/sap\/([^\/]+(?:\/[^\/]+)*?)\/(.+)$/);
-         if (iwfndMatch) {
-           let servicePath = iwfndMatch[1]; // e.g., "IWFND/SG_MED_CATALOG"
-           const entitySet = iwfndMatch[2]; // e.g., "ServiceCollection"
-           fixedUrl = `/sap/opu/odata/${servicePath};v=2/${entitySet}`;
-         }
+        // Fix /sap/opu/odata/sap/IWFND/ or /sap/opu/odata/sap//IWFND/ pattern
+        if (fixedUrl.includes('/sap/opu/odata/sap/IWFND/')) {
+          // Remove query string if present
+          const urlWithoutQuery = fixedUrl.split('?')[0];
+          // Extract the service path and entity set
+          // For URLs like: /sap/opu/odata/sap/IWFND/SG_MED_CATALOG/ServiceCollection
+          // We want to extract: servicePath = "IWFND/SG_MED_CATALOG", entitySet = "ServiceCollection"
+          const iwfndMatch = urlWithoutQuery.match(/\/sap\/opu\/odata\/sap\/(.+)\/(.+)$/);
+          if (iwfndMatch) {
+            let servicePath = iwfndMatch[1]; // e.g., "IWFND/SG_MED_CATALOG"
+            const entitySet = iwfndMatch[2]; // e.g., "ServiceCollection"
+            // Reconstruct URL with query string if it was present
+            const queryString = fixedUrl.substring(fixedUrl.indexOf('?'));
+            fixedUrl = `/sap/opu/odata/${servicePath};v=2/${entitySet}${queryString || ''}`;
+          }
+        } else if (fixedUrl.startsWith('/sap/opu/odata/IWFND/CATALOGSERVICE') || fixedUrl.startsWith('/sap/opu/odata/IWBEP/')) {
+          // URL is already correctly formatted for IWFND/IWBEP services, use as-is
+          // Just ensure it has proper version if needed
+          if (!fixedUrl.includes(';v=') && fixedUrl.includes('/IWFND/CATALOGSERVICE')) {
+            fixedUrl = fixedUrl.replace('/IWFND/CATALOGSERVICE', '/IWFND/CATALOGSERVICE;v=2');
+          }
+        }
        } else if (fixedUrl.startsWith('/sap/opu/odata/IWFND/CATALOGSERVICE') || fixedUrl.startsWith('/sap/opu/odata/IWBEP/')) {
          // URL is already correctly formatted for IWFND/IWBEP services, use as-is
          // Just ensure it has proper version if needed

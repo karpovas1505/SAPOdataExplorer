@@ -216,9 +216,11 @@ class SapClient {
     const versionStr = version ? String(version) : undefined;
     const versionSuffix = versionStr && versionStr !== '1' ? `;v=${versionStr}` : '';
     let url: string;
-    if (serviceName.startsWith('IWFND/') || serviceName.startsWith('IWBEP/')) {
-      // For IWFND services, use CATALOGSERVICE directly without entity name
-      url = `/sap/opu/odata/IWFND/CATALOGSERVICE${versionSuffix}/$metadata`;
+    // Handle service names that might start with '/' (especially for IWFND/IWBEP services from catalog)
+    const cleanServiceName = serviceName.startsWith('/') ? serviceName.substring(1) : serviceName;
+    if (cleanServiceName.startsWith('IWFND/') || cleanServiceName.startsWith('IWBEP/')) {
+      // For IWFND services, use the service name directly (it's already the correct path)
+      url = `/sap/opu/odata/${cleanServiceName}${versionSuffix}/$metadata`;
     } else {
       url = `/sap/opu/odata/sap/${serviceName}${versionSuffix}/$metadata`;
     }
