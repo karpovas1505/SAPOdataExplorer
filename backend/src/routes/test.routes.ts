@@ -53,40 +53,45 @@ router.post('/', async (req, res, next) => {
        // Fix any issues with IWFND/IWBEP paths - handle double slashes and wrong prefixes
        let fixedUrl = url;
        
-       // Normalize the URL by removing any double slashes
-       while (fixedUrl.includes('//')) {
-         fixedUrl = fixedUrl.replace('//', '/');
+       // Separate query string if present
+       const queryStringPos = fixedUrl.indexOf('?');
+       let queryString = '';
+       let baseUrl = fixedUrl;
+       if (queryStringPos !== -1) {
+         baseUrl = fixedUrl.substring(0, queryStringPos);
+         queryString = fixedUrl.substring(queryStringPos);
        }
        
-        // Fix /sap/opu/odata/sap/IWFND/ or /sap/opu/odata/sap//IWFND/ pattern
-        if (fixedUrl.includes('/sap/opu/odata/sap/IWFND/')) {
-          // Remove query string if present
-          const urlWithoutQuery = fixedUrl.split('?')[0];
-          // Extract the service path and entity set
-          // For URLs like: /sap/opu/odata/sap/IWFND/SG_MED_CATALOG/ServiceCollection
-          // We want to extract: servicePath = "IWFND/SG_MED_CATALOG", entitySet = "ServiceCollection"
-          const iwfndMatch = urlWithoutQuery.match(/\/sap\/opu\/odata\/sap\/(.+)\/(.+)$/);
-          if (iwfndMatch) {
-            let servicePath = iwfndMatch[1]; // e.g., "IWFND/SG_MED_CATALOG"
-            const entitySet = iwfndMatch[2]; // e.g., "ServiceCollection"
-            // Reconstruct URL with query string if it was present
-            const queryString = fixedUrl.substring(fixedUrl.indexOf('?'));
-            fixedUrl = `/sap/opu/odata/${servicePath};v=2/${entitySet}${queryString || ''}`;
-          }
-        } else if (fixedUrl.startsWith('/sap/opu/odata/IWFND/CATALOGSERVICE') || fixedUrl.startsWith('/sap/opu/odata/IWBEP/')) {
-          // URL is already correctly formatted for IWFND/IWBEP services, use as-is
-          // Just ensure it has proper version if needed
-          if (!fixedUrl.includes(';v=') && fixedUrl.includes('/IWFND/CATALOGSERVICE')) {
-            fixedUrl = fixedUrl.replace('/IWFND/CATALOGSERVICE', '/IWFND/CATALOGSERVICE;v=2');
-          }
-        }
-       } else if (fixedUrl.startsWith('/sap/opu/odata/IWFND/CATALOGSERVICE') || fixedUrl.startsWith('/sap/opu/odata/IWBEP/')) {
+       // Normalize the base URL by removing any double slashes
+       while (baseUrl.includes('//')) {
+         baseUrl = baseUrl.replace('//', '/');
+       }
+       
+       // Fix /sap/opu/odata/sap/IWFND/ or /sap/opu/odata/sap//IWFND/ pattern
+       if (baseUrl.includes('/sap/opu/odata/sap/IWFND/')) {
+         // Extract the service path and entity set from base URL
+         // For URLs like: /sap/opu/odata/sap//IWFND/SG_MED_CATALOG/ServiceCollection
+         // We want to extract: servicePath = "IWFND/SG_MED_CATALOG", entitySet = "ServiceCollection"
+         const iwfndMatch = baseUrl.match(/\/sap\/opu\/odata\/sap\/([^\/]+(?:\/[^\/]+)*?)\/(.+)$/);
+         if (iwfndMatch) {
+           let servicePath = iwfndMatch[1]; // e.g., "IWFND/SG_MED_CATALOG" or "/IWFND/SG_MED_CATALOG"
+           // Remove leading slash if present (from the double slash case)
+           if (servicePath.startsWith('/')) {
+             servicePath = servicePath.substring(1);
+           }
+           const entitySet = iwfndMatch[2]; // e.g., "ServiceCollection"
+           baseUrl = `/sap/opu/odata/${servicePath};v=2/${entitySet}`;
+         }
+       } else if (baseUrl.startsWith('/sap/opu/odata/IWFND/CATALOGSERVICE') || baseUrl.startsWith('/sap/opu/odata/IWBEP/')) {
          // URL is already correctly formatted for IWFND/IWBEP services, use as-is
          // Just ensure it has proper version if needed
-         if (!fixedUrl.includes(';v=') && fixedUrl.includes('/IWFND/CATALOGSERVICE')) {
-           fixedUrl = fixedUrl.replace('/IWFND/CATALOGSERVICE', '/IWFND/CATALOGSERVICE;v=2');
+         if (!baseUrl.includes(';v=') && baseUrl.includes('/IWFND/CATALOGSERVICE')) {
+           baseUrl = baseUrl.replace('/IWFND/CATALOGSERVICE', '/IWFND/CATALOGSERVICE;v=2');
          }
        }
+       
+       // Reattach query string
+       fixedUrl = baseUrl + queryString;
        
        fullUrl = fixedUrl;
     } else if (url.startsWith('/IWFND/') || url.startsWith('/SAP/')) {
