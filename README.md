@@ -2,6 +2,17 @@
 
 Приложение для просмотра, тестирования и исследования OData сервисов в SAP ECC системе.
 
+## 📸 Скриншоты интерфейса
+
+### Список сервисов
+![Список сервисов](./screenshots/ServiceList.PNG)
+
+### Метаданные сервиса
+![Метаданные сервиса](./screenshots/metadata.PNG)
+
+### Модель данных
+![Модель данных](./screenshots/Model.PNG)
+
 ## 🚀 Возможности
 
 - 📋 Просмотр списка всех опубликованных OData сервисов
@@ -130,6 +141,26 @@ curl -X POST http://localhost:3001/api/test \
     "method": "GET",
     "url": "/ZGW_SAMPLE_SRV/FlightCollection"
   }'
+```
+
+### Пример ответа метаданных (частичный)
+```xml
+<edmx:Edmx Version="4.0">
+  <edmx:DataServices>
+    <Schema Namespace="ZGW_SAMPLE_SRV">
+      <EntityType Name="Flight">
+        <Key>
+          <PropertyRef Name="FlightDate"/>
+          <PropertyRef Name="FlightConnectionID"/>
+        </Key>
+        <Property Name="FlightDate" Type="Edm.DateTime" Nullable="false"/>
+        <Property Name="FlightConnectionID" Type="Edm.String" MaxLength="6" Nullable="false"/>
+        <Property Name="Price" Type="Edm.Decimal" Precision="12" Scale="3"/>
+        <NavigationProperty Name="ToCustomer" Type="Collection(ZGW_SAMPLE_SRV.Customer)"/>
+      </EntityType>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>
 ```
 
 ## 🔒 Безопасность
