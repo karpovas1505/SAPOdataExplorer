@@ -139,9 +139,11 @@ router.get('/:serviceName/details', async (req, res, next) => {
       },
       se80Transaction: `/nse80`,
      sapGatewayInfo: {
-         serviceUrl: serviceName.startsWith('IWFND/') || serviceName.startsWith('IWBEP/') 
-           ? `/sap/opu/odata/${serviceName};v=2/` 
-           : `/sap/opu/odata/sap/${serviceName}/`,
+         // Handle service names that might start with '/' (especially for IWFND/IWBEP services from catalog)
+         const cleanServiceName = serviceName.startsWith('/') ? serviceName.substring(1) : serviceName;
+         serviceUrl: cleanServiceName.startsWith('IWFND/') || cleanServiceName.startsWith('IWBEP/') 
+           ? `/sap/opu/odata/${cleanServiceName};v=2/` 
+           : `/sap/opu/odata/sap/${cleanServiceName}/`,
          serviceVersion: service.ServiceVersion,
        },
     });
