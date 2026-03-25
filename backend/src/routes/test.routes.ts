@@ -50,23 +50,29 @@ router.post('/', async (req, res, next) => {
     if (url.startsWith('http')) {
       fullUrl = url;
     } else if (url.startsWith('/sap/opu/odata/')) {
-      // Fix any issues with IWFND/IWBEP paths - handle double slashes and wrong prefixes
-      let fixedUrl = url;
-      
-      // Fix double slash after /sap/
-      fixedUrl = fixedUrl.replace('/sap//', '/sap/');
-      
-      // Fix /sap/opu/odata/sap/IWFND/ or /sap/opu/odata/sap//IWFND/ pattern
-      if (fixedUrl.includes('/sap/opu/odata/sap/IWFND/') || fixedUrl.includes('/sap/opu/odata/sap/IWBEP/')) {
-        // Extract the entity and path after IWFND/ or IWBEP/
-        const iwfndMatch = fixedUrl.match(/\/sap\/opu\/odata\/sap\/?.*?(IWFND\/[^\/]+)\/(.+)$/);
-        if (iwfndMatch) {
-          const entityPart = iwfndMatch[2]; // e.g., "SG_MED_CATALOG/Vocabularies"
-          fixedUrl = `/sap/opu/odata/IWFND/CATALOGSERVICE;v=2/${entityPart}`;
-        }
-      }
-      
-      fullUrl = fixedUrl;
+       // Fix any issues with IWFND/IWBEP paths - handle double slashes and wrong prefixes
+       let fixedUrl = url;
+       
+       // Fix double slash after /sap/
+       fixedUrl = fixedUrl.replace('/sap//', '/sap/');
+       
+       // Fix /sap/opu/odata/sap/IWFND/ or /sap/opu/odata/sap//IWFND/ pattern
+       if (fixedUrl.includes('/sap/opu/odata/sap/IWFND/') || fixedUrl.includes('/sap/opu/odata/sap//IWFND/')) {
+         // Extract the entity and path after IWFND/ or IWBEP/
+         const iwfndMatch = fixedUrl.match(/\/sap\/opu\/odata\/sap\/?.*?(IWFND\/[^\/]+)\/(.+)$/);
+         if (iwfndMatch) {
+           const entityPart = iwfndMatch[2]; // e.g., "SG_MED_CATALOG/Vocabularies"
+           fixedUrl = `/sap/opu/odata/IWFND/CATALOGSERVICE;v=2/${entityPart}`;
+         }
+       } else if (fixedUrl.startsWith('/sap/opu/odata/IWFND/CATALOGSERVICE') || fixedUrl.startsWith('/sap/opu/odata/IWBEP/')) {
+         // URL is already correctly formatted for IWFND/IWBEP services, use as-is
+         // Just ensure it has proper version if needed
+         if (!fixedUrl.includes(';v=') && fixedUrl.includes('/IWFND/CATALOGSERVICE')) {
+           fixedUrl = fixedUrl.replace('/IWFND/CATALOGSERVICE', '/IWFND/CATALOGSERVICE;v=2');
+         }
+       }
+       
+       fullUrl = fixedUrl;
     } else if (url.startsWith('/IWFND/') || url.startsWith('/SAP/')) {
       // Remove /IWFND/ or /SAP/ prefix and use CATALOGSERVICE
       const entityPath = url.replace(/^\/IWFND\//, '').replace(/^\/SAP\//, '');

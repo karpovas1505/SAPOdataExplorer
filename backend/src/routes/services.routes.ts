@@ -138,10 +138,12 @@ router.get('/:serviceName/details', async (req, res, next) => {
         },
       },
       se80Transaction: `/nse80`,
-      sapGatewayInfo: {
-        serviceUrl: `/sap/opu/odata/sap/${serviceName}/`,
-        serviceVersion: service.ServiceVersion,
-      },
+     sapGatewayInfo: {
+         serviceUrl: serviceName.startsWith('IWFND/') || serviceName.startsWith('IWBEP/') 
+           ? `/sap/opu/odata/${serviceName};v=2/` 
+           : `/sap/opu/odata/sap/${serviceName}/`,
+         serviceVersion: service.ServiceVersion,
+       },
     });
   } catch (error) {
     next(error);
