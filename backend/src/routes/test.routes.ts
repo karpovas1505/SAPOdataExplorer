@@ -58,11 +58,14 @@ router.post('/', async (req, res, next) => {
        
        // Fix /sap/opu/odata/sap/IWFND/ or /sap/opu/odata/sap//IWFND/ pattern
        if (fixedUrl.includes('/sap/opu/odata/sap/IWFND/') || fixedUrl.includes('/sap/opu/odata/sap//IWFND/')) {
-         // Extract the entity and path after IWFND/ or IWBEP/
-         const iwfndMatch = fixedUrl.match(/\/sap\/opu\/odata\/sap\/?.*?(IWFND\/[^\/]+)\/(.+)$/);
+         // Extract the service name (everything between sap/ and the next / after IWFND/...)
+         // For: /sap/opu/odata/sap//IWFND/SG_MED_CATALOG/ServiceCollection
+         // We want to extract: IWFND/SG_MED_CATALOG
+         const iwfndMatch = fixedUrl.match(/\/sap\/opu\/odata\/sap\/([^\/]+\/.*?)\/(.+)$/);
          if (iwfndMatch) {
-           const entityPart = iwfndMatch[2]; // e.g., "SG_MED_CATALOG/Vocabularies"
-           fixedUrl = `/sap/opu/odata/IWFND/CATALOGSERVICE;v=2/${entityPart}`;
+           const serviceName = iwfndMatch[1]; // e.g., "IWFND/SG_MED_CATALOG"
+           const entityPath = iwfndMatch[2]; // e.g., "ServiceCollection"
+           fixedUrl = `/sap/opu/odata/${serviceName};v=2/${entityPath}`;
          }
        } else if (fixedUrl.startsWith('/sap/opu/odata/IWFND/CATALOGSERVICE') || fixedUrl.startsWith('/sap/opu/odata/IWBEP/')) {
          // URL is already correctly formatted for IWFND/IWBEP services, use as-is
