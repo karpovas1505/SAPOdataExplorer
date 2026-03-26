@@ -67,8 +67,6 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
     return fullUrl;
   };
 
-  const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
-
   const handleGeneratePdf = async () => {
     if (!url) {
       setError('Please enter a URL');
@@ -79,7 +77,6 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
     setError(null);
     setPdfUrl(null);
     setResponseInfo(null);
-    setPendingBlob(null);
 
     try {
       const fullUrl = buildFullUrl();
@@ -100,7 +97,10 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
 
       const sizeStr = contentLength ? `${Math.round(parseInt(contentLength) / 1024)} KB` : `${Math.round(blob.size / 1024)} KB`;
       setResponseInfo({ type: contentType, size: sizeStr });
-      setPendingBlob(blob);
+      
+      // Auto-load PDF after generation
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
     } catch (err: any) {
       console.error('PDF generation error:', err);
       if (err.response?.status === 404) {
@@ -118,12 +118,6 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleLoadPdf = () => {
-    if (!pendingBlob) return;
-    const objectUrl = URL.createObjectURL(pendingBlob);
-    setPdfUrl(objectUrl);
   };
 
   const handleDownload = () => {
@@ -227,24 +221,7 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
         </Alert>
       )}
 
-      {responseInfo && pendingBlob && !pdfUrl && (
-        <Card withBorder p="md">
-          <Group justify="space-between" mb="md">
-            <Group gap="xs">
-              <Badge color="green" size="lg">Ready</Badge>
-              <Text size="sm" c="dimmed">
-                Content-Type: {responseInfo.type} | Size: {responseInfo.size}
-              </Text>
-            </Group>
-            <Button leftSection={<IconPlayerPlay size={16} />} size="sm" onClick={handleLoadPdf}>
-              Load PDF
-            </Button>
-          </Group>
-          <Text c="dimmed" size="sm">
-            Click "Load PDF" to preview or download
-          </Text>
-        </Card>
-      )}
+
 
       {pdfUrl && (
         <Card withBorder p="md">
@@ -261,13 +238,13 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
           </Group>
 
           <Box style={{ border: '1px solid var(--mantine-color-gray-3)', borderRadius: 4, overflow: 'hidden', height: '70vh' }}>
-            <object
-              data={pdfUrl}
-              type="application/pdf"
-              style={{ width: '100%', height: '100%' }}
+            <iframe
+              src={pdfUrl}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="PDF Preview"
             >
               <Text c="dimmed">Your browser does not support PDF preview. Click Download to save the file.</Text>
-            </object>
+            </iframe>
           </Box>
         </Card>
       )}
