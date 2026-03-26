@@ -20,7 +20,7 @@ sap-odata-explorer/
 │   │   ├── routes/         # API endpoints
 │   │   ├── services/       # SAP HTTP клиент
 │   │   └── app.ts          # Точка входа
-│   └── .env               # Переменные окружения
+│   └── .env.local         # Переменные окружения (локальные)
 │
 └── frontend/               # React + TypeScript + Vite
     ├── src/
@@ -110,7 +110,7 @@ Frontend будет доступен на `http://localhost:5173`
 |----------|--------|----------|
 | `/api/health` | GET | Проверка состояния |
 | `/api/services` | GET | Список OData сервисов |
-| `/api/services/:name/metadata` | GET | Метаданные сервиса |
+| `/api/services/metadata?serviceName=...` | GET | Метаданные сервиса |
 | `/api/services/:name/entities` | GET | Список Entity Sets |
 | `/api/test` | POST | Тестовый запрос |
 
@@ -144,11 +144,20 @@ GET /api/services/ZGW_SAMPLE_SRV/metadata
 ### Тестовый запрос
 
 ```bash
+# Для стандартных SAP сервисов
 curl -X POST http://localhost:3001/api/test \
   -H "Content-Type: application/json" \
   -d '{
     "method": "GET",
     "url": "/ZGW_SAMPLE_SRV/FlightCollection"
+  }'
+
+# Для IWFND сервисов (например, CATALOGSERVICE)
+curl -X POST http://localhost:3001/api/test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "GET",
+    "url": "/CATALOGSERVICE/ServiceCollection"
   }'
 ```
 
