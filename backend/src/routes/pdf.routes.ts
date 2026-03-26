@@ -7,6 +7,10 @@ router.post('/', async (req, res, next) => {
   try {
     const { url, method = 'GET', params } = req.body;
 
+    console.log(`\n=== PDF TEST REQUEST (RAW) ===`);
+    console.log(`Body:`, JSON.stringify(req.body));
+    console.log(`========================\n`);
+
     if (!url) {
       res.status(400).json({
         success: false,
@@ -38,9 +42,23 @@ router.post('/', async (req, res, next) => {
     const contentType = response.headers['content-type'] || 'application/pdf';
     const filename = response.headers['content-disposition']?.match(/filename="?([^";]+)"?/)?.[1] || 'output.pdf';
 
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-    res.send(Buffer.from(response.data));
+    console.log(`\n=== PDF RESPONSE HEADERS ===`);
+    console.log(`Content-Type: ${contentType}`);
+    console.log(`Content-Disposition: inline; filename="${filename}"`);
+    console.log(`Content-Length: ${response.data.length}`);
+    console.log(`============================\n`);
+
+    // Send as base64 to avoid CORS issues with blob URLs
+    const base64Data = Buffer.from(response.data).toString('base64');
+    const dataUrl = `data:${contentType};base64,${base64Data}`;
+    
+    res.json({
+      success: true,
+      dataUrl,
+      filename,
+      contentType,
+      size: response.data.length,
+    });
   } catch (error: any) {
     console.error(`\n=== PDF TEST REQUEST ERROR ===`);
     console.error(`Error:`, error.message);

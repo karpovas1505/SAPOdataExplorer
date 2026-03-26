@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Test</title>
+</head>
+<body>
+    <h1>PDF Test</h1>
+    <button onclick="testPdf()">Test PDF</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testPdf() {
+            const url = "/sap/opu/odata/sap/ZAWP_MMS_SRV/KdtpSentPrintSet('')/$value";
+            const response = await fetch('http://localhost:3001/api/pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url, method: 'GET' })
+            });
+            
+            const result = document.getElementById('result');
+            if (response.ok) {
+                const blob = await response.blob();
+                const objectUrl = URL.createObjectURL(blob);
+                result.innerHTML = `<iframe src="${objectUrl}" style="width:100%; height:500px;"></iframe>`;
+            } else {
+                const error = await response.text();
+                result.innerHTML = `<pre>${error}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

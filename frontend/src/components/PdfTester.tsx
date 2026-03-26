@@ -84,23 +84,17 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
 
       const response = await servicesApi.testPdfRequest(fullUrl, method);
       
-      const contentType = response.headers['content-type'] || 'application/pdf';
-      const contentLength = response.headers['content-length'];
-      
-      let blob: Blob;
-      const cleanContentType = contentType.split(';')[0].trim();
-      if (response.data instanceof Blob) {
-        blob = response.data;
-      } else {
-        blob = new Blob([response.data], { type: cleanContentType });
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Failed to generate PDF');
       }
-
-      const sizeStr = contentLength ? `${Math.round(parseInt(contentLength) / 1024)} KB` : `${Math.round(blob.size / 1024)} KB`;
+      
+      const { dataUrl, filename, contentType, size } = response.data;
+      
+      const sizeStr = size ? `${Math.round(size / 1024)} KB` : 'Unknown size';
       setResponseInfo({ type: contentType, size: sizeStr });
       
-      // Auto-load PDF after generation
-      const objectUrl = URL.createObjectURL(blob);
-      setPdfUrl(objectUrl);
+      // Use the data URL directly
+      setPdfUrl(dataUrl);
     } catch (err: any) {
       console.error('PDF generation error:', err);
       if (err.response?.status === 404) {
@@ -238,13 +232,13 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
           </Group>
 
           <Box style={{ border: '1px solid var(--mantine-color-gray-3)', borderRadius: 4, overflow: 'hidden', height: '70vh' }}>
-            <iframe
-              src={pdfUrl}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              title="PDF Preview"
+            <object
+              data={pdfUrl}
+              type="application/pdf"
+              style={{ width: '100%', height: '100%' }}
             >
               <Text c="dimmed">Your browser does not support PDF preview. Click Download to save the file.</Text>
-            </iframe>
+            </object>
           </Box>
         </Card>
       )}

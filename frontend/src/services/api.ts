@@ -122,9 +122,7 @@ export const servicesApi = {
     api.post<TestResponse>('/test', data),
 
   testPdfRequest: async (url: string, method: string = 'GET', params?: Record<string, string>) => {
-    const response = await api.post('/pdf', { url, method, params }, {
-      responseType: 'blob',
-    });
+    const response = await api.post('/pdf', { url, method, params });
     return response;
   },
 
