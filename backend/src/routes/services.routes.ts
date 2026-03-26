@@ -39,10 +39,12 @@ router.get('/', async (req, res, next) => {
     
     const formattedServices = services.map((service: any) => {
       // Use title/ExternalName if available, otherwise fall back to TechnicalServiceName
-      const displayName = service.title || service.ExternalName || service.Description || service.TechnicalServiceName;
+      const displayName = service.Title || service.ExternalName || service.Description || service.TechnicalServiceName;
+      // Use Title (External Name) for API calls if available, otherwise fall back to TechnicalServiceName
+      const apiName = service.Title || service.ExternalName || service.TechnicalServiceName;
       return {
-        id: service.ServiceId,
-        name: service.TechnicalServiceName,  // Keep technical name for API calls
+        id: service.ID || service.ServiceId,
+        name: apiName,  // Use Title/ExternalName for API calls
         displayName: displayName,  // Human-readable name for display
         description: service.Description,
         version: service.TechnicalServiceVersion,
@@ -75,7 +77,11 @@ router.get('/:serviceName/details', async (req, res, next) => {
     
     // Get service details from catalog
     const services = await sapClient.getServices();
-    const service = services.find((s: any) => s.TechnicalServiceName === serviceName);
+    const service = services.find((s: any) => 
+      s.TechnicalServiceName === serviceName || 
+      s.Title === serviceName || 
+      s.ExternalName === serviceName
+    );
     
     if (!service) {
       return res.status(404).json({
@@ -138,14 +144,16 @@ router.get('/:serviceName/details', async (req, res, next) => {
         },
       },
       se80Transaction: `/nse80`,
-     sapGatewayInfo: {
-         // Handle service names that might start with '/' (especially for IWFND/IWBEP services from catalog)
-         const cleanServiceName = serviceName.startsWith('/') ? serviceName.substring(1) : serviceName;
-         serviceUrl: cleanServiceName.startsWith('IWFND/') || cleanServiceName.startsWith('IWBEP/') 
-           ? `/sap/opu/odata/${cleanServiceName};v=2/` 
-           : `/sap/opu/odata/sap/${cleanServiceName}/`,
-         serviceVersion: service.ServiceVersion,
-       },
+      sapGatewayInfo: {
+          // Handle service names that might start with '/' (especially for IWFND/IWBEP services from catalog)
+          serviceUrl: (() => {
+            const cleanServiceName = serviceName.startsWith('/') ? serviceName.substring(1) : serviceName;
+            return cleanServiceName.startsWith('IWFND/') || cleanServiceName.startsWith('IWBEP/') 
+              ? `/sap/opu/odata/${cleanServiceName};v=2/` 
+              : `/sap/opu/odata/sap/${cleanServiceName}/`;
+          })(),
+          serviceVersion: service.ServiceVersion,
+        },
     });
   } catch (error) {
     next(error);

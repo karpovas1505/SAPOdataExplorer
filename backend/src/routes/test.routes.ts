@@ -98,6 +98,10 @@ router.post('/', async (req, res, next) => {
       // Remove /IWFND/ or /SAP/ prefix and use CATALOGSERVICE
       const entityPath = url.replace(/^\/IWFND\//, '').replace(/^\/SAP\//, '');
       fullUrl = `/sap/opu/odata/IWFND/CATALOGSERVICE;v=2/${entityPath}`;
+    } else if (url.startsWith('/CATALOGSERVICE/')) {
+      // Handle CATALOGSERVICE requests
+      const entityPath = url.replace(/^\/CATALOGSERVICE\//, '');
+      fullUrl = `/sap/opu/odata/IWFND/CATALOGSERVICE;v=2/${entityPath}`;
     } else {
       fullUrl = `/sap/opu/odata/sap${url}`;
     }

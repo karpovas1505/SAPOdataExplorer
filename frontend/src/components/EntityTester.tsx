@@ -1,9 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const buildODataUrl = (serviceName: string, path: string = ''): string => {
+  // Handle IWFND/IWBEP services
   if (serviceName.startsWith('IWFND/') || serviceName.startsWith('IWBEP/')) {
     return `/sap/opu/odata/IWFND/CATALOGSERVICE;v=2/${path}`;
   }
+  // Handle CATALOGSERVICE (external name for IWFND services)
+  if (serviceName === 'CATALOGSERVICE' || serviceName.toUpperCase() === 'CATALOGSERVICE') {
+    return `/sap/opu/odata/IWFND/CATALOGSERVICE;v=2/${path}`;
+  }
+  // Handle standard SAP services with namespace
   return `/sap/opu/odata/sap/${serviceName}/${path}`;
 };
 

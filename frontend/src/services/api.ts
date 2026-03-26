@@ -37,7 +37,7 @@ export interface TestResponse {
   response: any;
 }
 
-const normalizeServiceName = (name: string) => name.replace(/^\/+/, '');
+const normalizeServiceName = (name: string) => name;
 
 export const servicesApi = {
   getServices: (search?: string) =>

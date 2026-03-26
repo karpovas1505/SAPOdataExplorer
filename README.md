@@ -2,17 +2,6 @@
 
 Приложение для просмотра, тестирования и исследования OData сервисов в SAP ECC системе.
 
-## 📸 Скриншоты интерфейса
-
-### Список сервисов
-![Список сервисов](./screenshots/ServiceList.PNG)
-
-### Метаданные сервиса
-![Метаданные сервиса](./screenshots/metadata.PNG)
-
-### Модель данных
-![Модель данных](./screenshots/Model.PNG)
-
 ## 🚀 Возможности
 
 - 📋 Просмотр списка всех опубликованных OData сервисов
@@ -57,6 +46,26 @@ sap-odata-explorer/
 - Material-UI (MUI)
 - TanStack Query (React Query)
 - Monaco Editor (XML/JSON просмотр)
+
+## 📸 Скриншоты интерфейса
+
+### Список сервисов
+![Список сервисов](./screenshots/ServiceList.PNG)
+
+### Метаданные сервиса
+![Метаданные сервиса](./screenshots/metadata.PNG)
+
+### Модель данных
+![Модель данных](./screenshots/Model.PNG)
+
+### Тестирование GetEntitySet
+![Тестирование GetEntitySet](./screenshots/GetEntitySet.PNG)
+
+### Тестирование GetEntity
+![Тестирование GetEntity](./screenshots/GetEntity.PNG)
+
+### Создание сущности (Create Entity)
+![Создание сущности](./screenshots/CreateEntity.PNG)
 
 ## 🚀 Быстрый старт
 

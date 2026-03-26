@@ -49,6 +49,9 @@ class SapClient {
         username: sapConfig.username,
         password: sapConfig.password,
       },
+      params: {
+        'sap-client': sapConfig.client,
+      },
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -190,6 +193,8 @@ class SapClient {
     const response = await this.client.get(url);
     let services = response.data?.d?.results || [];
     
+
+    
     // Filter only custom services (starting with Z or z, or /IWFND/)
     services = services.filter((service: any) => {
       const name = service.TechnicalServiceName || '';
@@ -213,20 +218,31 @@ class SapClient {
   }
 
   async getServiceMetadata(serviceName: string, version?: string) {
-    const versionStr = version ? String(version) : undefined;
-    const versionSuffix = versionStr && versionStr !== '1' ? `;v=${versionStr}` : '';
-    let url: string;
-    // Handle service names that might start with '/' (especially for IWFND/IWBEP services from catalog)
-    const cleanServiceName = serviceName.startsWith('/') ? serviceName.substring(1) : serviceName;
-    if (cleanServiceName.startsWith('IWFND/') || cleanServiceName.startsWith('IWBEP/')) {
-      // For IWFND services, use the service name directly (it's already the correct path)
-      url = `/sap/opu/odata/${cleanServiceName}${versionSuffix}/$metadata`;
-    } else {
-      url = `/sap/opu/odata/sap/${serviceName}${versionSuffix}/$metadata`;
-    }
-    console.log('Fetching metadata from:', url);
+    const services = await this.getServices();
+    const service = services.find((s: any) => {
+      // Match by technical name, title, or external name
+      return s.TechnicalServiceName === serviceName || 
+             s.Title === serviceName || 
+             s.ExternalName === serviceName;
+    });
     
-    const response = await this.client.get(url, {
+    if (!service || !service.MetadataUrl) {
+      throw new Error(`Service "${serviceName}" not found or has no MetadataUrl`);
+    }
+    
+    // Use the MetadataUrl directly
+    let metadataUrl = service.MetadataUrl;
+    
+    // Ensure it ends with /$metadata
+    if (!metadataUrl.endsWith('/$metadata')) {
+      metadataUrl = metadataUrl.replace(/\/*$/, '/$metadata');
+    }
+    
+    // Extract the relative path for axios
+    const urlPath = new URL(metadataUrl).pathname;
+    
+    const response = await this.client.get(urlPath, {
+      params: { 'sap-client': sapConfig.client },
       headers: {
         'Accept': 'application/xml',
       },
