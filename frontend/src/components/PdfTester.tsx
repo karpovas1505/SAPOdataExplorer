@@ -16,7 +16,7 @@ import {
   SegmentedControl,
   Select,
 } from '@mantine/core';
-import { IconPlayerPlay, IconCopy, IconFileTypePdf, IconAlertCircle, IconDownload } from '@tabler/icons-react';
+import { IconPlayerPlay, IconCopy, IconFileTypePdf, IconAlertCircle, IconDownload, IconExternalLink } from '@tabler/icons-react';
 import { servicesApi } from '../services/api';
 
 interface PdfTesterProps {
@@ -37,6 +37,7 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [responseInfo, setResponseInfo] = useState<{ type: string; size: string } | null>(null);
 
   useEffect(() => {
@@ -44,6 +45,14 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
       setUrl(`${selectedEntity}('')/$value`);
     }
   }, [selectedEntity]);
+
+  useEffect(() => {
+    return () => {
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
+  }, []);
 
   const buildFullUrl = (): string => {
     if (!url) return '';
@@ -77,6 +86,11 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
     setError(null);
     setPdfUrl(null);
     setResponseInfo(null);
+    
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl);
+      setPdfBlobUrl(null);
+    }
 
     try {
       const fullUrl = buildFullUrl();
@@ -88,13 +102,26 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
         throw new Error(response.data.error || 'Failed to generate PDF');
       }
       
-      const { dataUrl, filename, contentType, size } = response.data;
+      const { dataUrl, contentType, size } = response.data;
       
       const sizeStr = size ? `${Math.round(size / 1024)} KB` : 'Unknown size';
       setResponseInfo({ type: contentType, size: sizeStr });
       
-      // Use the data URL directly
       setPdfUrl(dataUrl);
+      
+      // Create blob URL for better browser compatibility
+      try {
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        // Create blob with correct MIME type
+        const pdfBlob = blob.slice(0, blob.size, 'application/pdf');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        console.log('Blob created:', pdfBlob.size, 'bytes, type:', pdfBlob.type);
+        setPdfBlobUrl(blobUrl);
+      } catch (e) {
+        console.error('Failed to create blob:', e);
+        setPdfBlobUrl(dataUrl);
+      }
     } catch (err: any) {
       console.error('PDF generation error:', err);
       if (err.response?.status === 404) {
@@ -115,14 +142,23 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
   };
 
   const handleDownload = () => {
-    if (!pdfUrl) return;
+    const urlToDownload = pdfBlobUrl || pdfUrl;
+    if (!urlToDownload) return;
     
     const link = document.createElement('a');
-    link.href = pdfUrl;
+    link.href = urlToDownload;
     link.download = `output_${Date.now()}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleOpenInNewTab = () => {
+    if (pdfBlobUrl) {
+      window.open(pdfBlobUrl, '_blank');
+    } else if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
+    }
   };
 
   const fullUrl = buildFullUrl();
@@ -217,7 +253,7 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
 
 
 
-      {pdfUrl && (
+      {pdfBlobUrl && (
         <Card withBorder p="md">
           <Group justify="space-between" mb="md">
             <Group gap="xs">
@@ -226,19 +262,22 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
                 {responseInfo?.type} | {responseInfo?.size}
               </Text>
             </Group>
-            <Button leftSection={<IconDownload size={16} />} size="sm" onClick={handleDownload}>
-              Download
-            </Button>
+            <Group gap="xs">
+              <Button leftSection={<IconExternalLink size={16} />} size="sm" variant="light" onClick={handleOpenInNewTab}>
+                Open in Tab
+              </Button>
+              <Button leftSection={<IconDownload size={16} />} size="sm" onClick={handleDownload}>
+                Download
+              </Button>
+            </Group>
           </Group>
 
           <Box style={{ border: '1px solid var(--mantine-color-gray-3)', borderRadius: 4, overflow: 'hidden', height: '70vh' }}>
-            <object
-              data={pdfUrl}
+            <embed
+              src={pdfBlobUrl}
               type="application/pdf"
               style={{ width: '100%', height: '100%' }}
-            >
-              <Text c="dimmed">Your browser does not support PDF preview. Click Download to save the file.</Text>
-            </object>
+            />
           </Box>
         </Card>
       )}

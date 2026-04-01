@@ -16,7 +16,7 @@ import {
   Box,
   SimpleGrid,
 } from '@mantine/core';
-import { IconArrowLeft, IconChevronDown, IconPackage, IconCode } from '@tabler/icons-react';
+import { IconArrowLeft, IconChevronDown, IconPackage, IconCode, IconFileTypePdf } from '@tabler/icons-react';
 import Editor from '@monaco-editor/react';
 import { ODataService } from '../services/api';
 import {
@@ -28,6 +28,7 @@ import {
 import EntityTester from './EntityTester';
 import FunctionImportTester from './FunctionImportTester';
 import PackageTreeInline from './PackageTreeInline';
+import PdfTester from './PdfTester';
 
 interface ServiceDetailProps {
   service: ODataService;
@@ -125,6 +126,7 @@ const ServiceDetail = ({ service, onBack }: ServiceDetailProps) => {
           <Tabs.Tab value="datamodel">Data Model</Tabs.Tab>
           <Tabs.Tab value="test">Test Entities</Tabs.Tab>
           <Tabs.Tab value="testfn">Test Functions</Tabs.Tab>
+          <Tabs.Tab value="pdf" leftSection={<IconFileTypePdf size={14} />}>PDF Tester</Tabs.Tab>
           <Tabs.Tab value="abap">ABAP Source</Tabs.Tab>
         </Tabs.List>
 
@@ -308,6 +310,13 @@ const ServiceDetail = ({ service, onBack }: ServiceDetailProps) => {
             serviceName={service.name}
             serviceVersion={service.version}
             functionImports={entitiesData?.functionImports || []}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="pdf" pt="md">
+          <PdfTester
+            serviceName={service.name}
+            entities={entitiesData?.entities?.map((e: any) => e.name) || []}
           />
         </Tabs.Panel>
 
