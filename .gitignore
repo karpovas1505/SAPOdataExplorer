@@ -30,6 +30,10 @@ Thumbs.db
 # Test coverage
 coverage/
 
+# MCP servers
+mcp-abap-adt/
+opencode.json
+
 # Misc
 nul
 *.tsbuildinfo
