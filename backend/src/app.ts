@@ -43,7 +43,16 @@ writeToLog(`Port: ${PORT}`);
 const corsOrigins = CORS_ORIGIN === '*' ? '*' : CORS_ORIGIN.split(',').map(o => o.trim());
 
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "http://*.powerm.ru:8000", "http://*.powerm.ru:44300"],
+      frameSrc: ["'self'", "blob:"],
+    },
+  },
   crossOriginEmbedderPolicy: false,
 }));
 
@@ -71,7 +80,6 @@ app.use('/api/services', servicesRoutes);
 app.use('/api/services', metadataRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/pdf', pdfRoutes);
-app.use('/api', servicesRoutes);
 
 // Error handling
 app.use(errorHandler);

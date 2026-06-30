@@ -239,7 +239,10 @@ class SapClient {
     }
     
     // Extract the relative path for axios
-    const urlPath = new URL(metadataUrl).pathname;
+    // Handle both absolute URLs and relative paths
+    const urlPath = metadataUrl.startsWith('http') 
+      ? new URL(metadataUrl).pathname 
+      : metadataUrl;
     
     const response = await this.client.get(urlPath, {
       params: { 'sap-client': sapConfig.client },

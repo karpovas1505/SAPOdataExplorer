@@ -111,8 +111,8 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
       
       // Create blob URL for better browser compatibility
       try {
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
+        const fetchResponse = await fetch(dataUrl);
+        const blob = await fetchResponse.blob();
         // Create blob with correct MIME type
         const pdfBlob = blob.slice(0, blob.size, 'application/pdf');
         const blobUrl = URL.createObjectURL(pdfBlob);
@@ -273,10 +273,10 @@ export default function PdfTester({ serviceName, entities = [] }: PdfTesterProps
           </Group>
 
           <Box style={{ border: '1px solid var(--mantine-color-gray-3)', borderRadius: 4, overflow: 'hidden', height: '70vh' }}>
-            <embed
+            <iframe
               src={pdfBlobUrl}
-              type="application/pdf"
-              style={{ width: '100%', height: '100%' }}
+              title="PDF Preview"
+              style={{ width: '100%', height: '100%', border: 'none' }}
             />
           </Box>
         </Card>

@@ -150,8 +150,6 @@ const operators = [
         conditionStr = `startswith(${condition.field}, ${value})`;
       } else if (condition.operator === 'endswith') {
         conditionStr = `endswith(${condition.field}, ${value})`;
-      } else if (['contains', 'startswith', 'endswith'].includes(condition.operator)) {
-        conditionStr = `${condition.operator}(${condition.field}, ${value})`;
       } else {
         conditionStr = `${condition.field} ${condition.operator} ${value}`;
       }

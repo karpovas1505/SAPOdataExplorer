@@ -216,7 +216,7 @@ router.get('/:serviceName/abap-source/:objectName', async (req, res, next) => {
 });
 
 // Get package objects (ABAP objects tree)
-router.get('/package/:packageName/objects', async (req, res) => {
+router.get('/package/:packageName/objects', async (req, res, next) => {
   try {
     const { packageName } = req.params;
     console.log(`\n[ROUTE] Package Objects Request - Package: ${packageName}`);
