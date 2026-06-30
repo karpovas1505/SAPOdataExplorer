@@ -71,7 +71,7 @@ sap-odata-explorer/
 
 ### 1. Настройка окружения
 
-Создайте файл `backend/.env`:
+**Для локальной разработки** — создайте файл `backend/.env.local` (имеет приоритет):
 
 ```env
 # SAP System Configuration
@@ -79,10 +79,22 @@ SAP_HOST=your-sap-host.com
 SAP_PORT=8000
 SAP_USER=your-username
 SAP_PASSWORD=your-password
+SAP_CLIENT=270
+
+# Backend System for ABAP Source Code (optional - if different from Gateway)
+# SAP_BACKEND_HOST=backend.example.com
+# SAP_BACKEND_PORT=8000
+SAP_BACKEND_CLIENT=280
 
 # Server Configuration
 PORT=3001
+NODE_ENV=development
+
+# CORS (comma-separated origins, or * for all)
+CORS_ORIGIN=http://localhost:5173
 ```
+
+**Для развёртывания на сервере** — создайте файл `backend/.env` (без суффикса `.local`), он используется, если `.env.local` отсутствует.
 
 ### 2. Запуск Backend
 
