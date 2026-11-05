@@ -43,36 +43,3 @@ export const useEntityFields = (serviceName: string, entityName: string, version
     enabled: !!serviceName && !!entityName,
   });
 };
-
-export const useServiceDetails = (serviceName: string) => {
-  return useQuery({
-    queryKey: ['details', serviceName],
-    queryFn: async () => {
-      const response = await servicesApi.getServiceDetails(serviceName);
-      return response.data;
-    },
-    enabled: !!serviceName,
-  });
-};
-
-export const useAbapSource = (serviceName: string, objectName: string, objectType?: string) => {
-  return useQuery({
-    queryKey: ['abapSource', serviceName, objectName, objectType],
-    queryFn: async () => {
-      const response = await servicesApi.getAbapSource(serviceName, objectName, objectType);
-      return response.data;
-    },
-    enabled: !!serviceName && !!objectName,
-  });
-};
-
-export const usePackageObjects = (packageName: string) => {
-  return useQuery({
-    queryKey: ['packageObjects', packageName],
-    queryFn: async () => {
-      const response = await servicesApi.getPackageObjects(packageName);
-      return response.data;
-    },
-    enabled: !!packageName,
-  });
-};
