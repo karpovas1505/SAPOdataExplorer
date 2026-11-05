@@ -1,26 +1,17 @@
 import { Router } from 'express';
 import sapClient from '../services/sapClient';
+import { assertSafeSapODataUrl, SapUrlValidationError } from '../utils/sapUrl';
 
 const router = Router();
 
 const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
-const MAX_URL_LENGTH = 2048;
-const DANGEROUS_PATTERNS = [/\.\./, /\/\//, /\0/];
 
 function validateTestRequest(method: string, url: string): string | null {
-  if (!ALLOWED_METHODS.includes(method.toUpperCase())) {
+  if (typeof method !== 'string' || !ALLOWED_METHODS.includes(method.toUpperCase())) {
     return `Invalid method: ${method}`;
   }
   if (!url || typeof url !== 'string') {
     return 'URL is required';
-  }
-  if (url.length > MAX_URL_LENGTH) {
-    return 'URL too long';
-  }
-  for (const pattern of DANGEROUS_PATTERNS) {
-    if (pattern.test(url)) {
-      return 'Invalid URL format';
-    }
   }
   return null;
 }
@@ -47,7 +38,7 @@ router.post('/', async (req, res, next) => {
     }
 
     let fullUrl: string;
-    if (url.startsWith('http')) {
+    if (/^https?:\/\//i.test(url)) {
       fullUrl = url;
     } else if (url.startsWith('/sap/opu/odata/')) {
        // Fix any issues with IWFND/IWBEP paths - handle double slashes and wrong prefixes
@@ -105,6 +96,8 @@ router.post('/', async (req, res, next) => {
     } else {
       fullUrl = `/sap/opu/odata/sap${url}`;
     }
+    fullUrl = assertSafeSapODataUrl(fullUrl);
+
     console.log(`\n=== TEST REQUEST ===`);
     console.log(`Method: ${method}`);
     console.log(`URL: ${fullUrl}`);
@@ -119,6 +112,14 @@ router.post('/', async (req, res, next) => {
       response: result,
     });
   } catch (error: any) {
+    if (error instanceof SapUrlValidationError) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+      return;
+    }
+
     console.error(`\n=== TEST REQUEST ERROR ===`);
     console.error(`Error:`, error.message);
     console.error(`Response Status:`, error.response?.status);

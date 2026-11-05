@@ -13,6 +13,7 @@ if (fs.existsSync(envLocalPath)) {
 }
 
 import sapConfig from '../config/sap.config';
+import { redactHeaders } from '../utils/sapUrl';
 
 const logFilePath = path.join(process.cwd(), 'server.log');
 
@@ -124,6 +125,7 @@ class SapClient {
               'Accept': 'application/json',
               ...(this.sessionCookies ? { 'Cookie': this.sessionCookies } : {}),
             },
+            maxRedirects: 0,
           });
           const token = response.headers['x-csrf-token'] || response.headers['X-CSRF-Token'];
           console.log('CSRF token received:', token ? 'Yes (length: ' + token.length + ')' : 'No');
@@ -157,6 +159,7 @@ class SapClient {
           'Accept': 'application/json',
           ...(this.sessionCookies ? { 'Cookie': this.sessionCookies } : {}),
         },
+        maxRedirects: 0,
       });
       
       // SAP returns CSRF token in lowercase header
@@ -349,7 +352,7 @@ class SapClient {
       const adtCookies = adtRootResponse.headers['set-cookie'];
       
       logToConsoleAndFile(`Token fetch response status: ${adtRootResponse.status}`);
-      logToConsoleAndFile(`Token fetch headers: ${JSON.stringify(adtRootResponse.headers)}`);
+      logToConsoleAndFile(`Token fetch headers: ${JSON.stringify(redactHeaders(adtRootResponse.headers))}`);
 
       // Use the repository nodestructure endpoint (correct ADT API for package contents)
       const url = `/sap/bc/adt/repository/nodestructure?parent_name=${packageName}&parent_tech_name=${packageName}&parent_type=DEVC%2FK&withShortDescriptions=true`;
@@ -368,7 +371,7 @@ class SapClient {
         headers['Cookie'] = Array.isArray(adtCookies) ? adtCookies.join('; ') : adtCookies;
       }
       
-      logToConsoleAndFile(`CSRF Token: ${adtCsrfToken || 'Not received'}`);
+      logToConsoleAndFile(`CSRF Token: ${adtCsrfToken ? 'Received' : 'Not received'}`);
       logToConsoleAndFile(`Cookies: ${adtCookies ? 'Received' : 'Not received'}`);
 
       const response = await this.backendClient.post(url, '', {
@@ -413,7 +416,7 @@ class SapClient {
       if (error.response) {
         logErrorToConsoleAndFile(`Response status: ${error.response.status}`);
         logErrorToConsoleAndFile(`Response data: ${error.response.data}`);
-        logErrorToConsoleAndFile(`Response headers: ${JSON.stringify(error.response.headers)}`);
+        logErrorToConsoleAndFile(`Response headers: ${JSON.stringify(redactHeaders(error.response.headers))}`);
       }
       throw new Error(`Failed to get package objects: ${error.message}`);
     }
@@ -638,6 +641,9 @@ class SapClient {
       method: methodLower as any,
       url,
       ...config,
+      // Never follow redirects: otherwise a same-origin URL could redirect the
+      // backend to an arbitrary host (SSRF bypass).
+      maxRedirects: 0,
     };
 
     if (data && ['post', 'put', 'patch'].includes(methodLower)) {
@@ -676,6 +682,8 @@ class SapClient {
     const config: AxiosRequestConfig = {
       method: methodLower as any,
       url,
+      // See executeRawRequest: do not allow redirects to bypass URL validation.
+      maxRedirects: 0,
     };
 
     if (data && ['post', 'put', 'patch'].includes(methodLower)) {

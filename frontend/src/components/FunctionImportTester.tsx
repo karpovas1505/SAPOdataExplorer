@@ -12,7 +12,6 @@ import {
   Table,
   Select,
   Badge,
-  Group,
   Stack,
   Box,
   Title,
@@ -41,7 +40,9 @@ interface FunctionImportTesterProps {
 const formatODataValue = (value: any): string => {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string' && value.match(/^\/Date\(\d+\)\/$/)) {
-    const timestamp = parseInt((value.match(/\d+/) || [])[0]);
+    const match = value.match(/\d+/);
+    if (!match) return value;
+    const timestamp = parseInt(match[0], 10);
     const date = new Date(timestamp);
     return date.toLocaleDateString('ru-RU', {
       year: 'numeric',
@@ -53,7 +54,7 @@ const formatODataValue = (value: any): string => {
   return String(value);
 };
 
-const FunctionImportTester = ({ serviceName, serviceVersion, functionImports = [] }: FunctionImportTesterProps) => {
+const FunctionImportTester = ({ serviceName, functionImports = [] }: FunctionImportTesterProps) => {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
   const [paramValues, setParamValues] = useState<Record<string, string>>({});
   const [response, setResponse] = useState<any>(null);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AppShell, Title, Container, Text, Anchor, Group, Burger, Tabs } from '@mantine/core';
+import { AppShell, Title, Container, Text, Anchor, Group, Burger } from '@mantine/core';
 import { IconDatabase } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import ServiceList from './components/ServiceList';
@@ -9,7 +9,6 @@ import { ODataService } from './services/api';
 function App() {
   const [selectedService, setSelectedService] = useState<ODataService | null>(null);
   const [opened, { toggle }] = useDisclosure();
-  const [activeTab, setActiveTab] = useState<string | null>('services');
 
   return (
     <AppShell

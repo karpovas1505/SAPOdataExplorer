@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Modal,
   Tree,
@@ -51,7 +50,6 @@ interface TreeNode {
 
 const PackageObjectsTree = ({ packageName, opened, onClose }: PackageObjectsTreeProps) => {
   const { data, isLoading, isError, error } = usePackageObjects(packageName);
-  const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
 
   const groupObjectsByType = () => {
     if (!data?.objects) return [];
@@ -153,8 +151,6 @@ const PackageObjectsTree = ({ packageName, opened, onClose }: PackageObjectsTree
             <Box style={{ maxHeight: '60vh', overflow: 'auto' }}>
               <Tree
                 data={buildTreeData()}
-                value={selectedNodes}
-                onChange={setSelectedNodes}
                 expandOnClick
                 styles={{
                   node: {

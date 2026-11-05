@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import sapClient from '../services/sapClient';
+import { assertSafeSapODataUrl, SapUrlValidationError } from '../utils/sapUrl';
 
 const router = Router();
 
@@ -11,7 +12,7 @@ router.post('/', async (req, res, next) => {
     console.log(`Body:`, JSON.stringify(req.body));
     console.log(`========================\n`);
 
-    if (!url) {
+    if (!url || typeof url !== 'string') {
       res.status(400).json({
         success: false,
         error: 'URL is required',
@@ -20,13 +21,15 @@ router.post('/', async (req, res, next) => {
     }
 
     let fullUrl: string;
-    if (url.startsWith('http')) {
+    if (/^https?:\/\//i.test(url)) {
       fullUrl = url;
     } else if (url.startsWith('/sap/')) {
       fullUrl = url;
     } else {
       fullUrl = `/sap/opu/odata/sap${url}`;
     }
+
+    fullUrl = assertSafeSapODataUrl(fullUrl);
 
     console.log(`\n=== PDF TEST REQUEST ===`);
     console.log(`Method: ${method}`);
@@ -60,6 +63,14 @@ router.post('/', async (req, res, next) => {
       size: response.data.length,
     });
   } catch (error: any) {
+    if (error instanceof SapUrlValidationError) {
+      res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+      return;
+    }
+
     console.error(`\n=== PDF TEST REQUEST ERROR ===`);
     console.error(`Error:`, error.message);
     console.error(`Response Status:`, error.response?.status);
