@@ -21,21 +21,12 @@ const writeToLog = (message: string) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { search } = req.query;
-    let services = await sapClient.getServices();
-
-    // Client-side search filtering (support string query)
-    if (typeof search === 'string' && search.trim()) {
-      const searchLower = search.toLowerCase().trim();
-      services = services.filter((service: any) => {
-        const name = (service.TechnicalServiceName || '').toLowerCase();
-        const description = (service.Description || '').toLowerCase();
-        const namespace = (service.Namespace || '').toLowerCase();
-        return name.includes(searchLower) || 
-               description.includes(searchLower) || 
-               namespace.includes(searchLower);
-      });
-    }
+    const { search, refresh } = req.query;
+    const forceRefresh = refresh === 'true' || refresh === '1';
+    const services = await sapClient.getServices(
+      typeof search === 'string' ? search : undefined,
+      forceRefresh
+    );
     
     const formattedServices = services.map((service: any) => {
       // Use title/ExternalName if available, otherwise fall back to TechnicalServiceName

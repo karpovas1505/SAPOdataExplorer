@@ -43,17 +43,13 @@ import {
 } from '@tabler/icons-react';
 import Editor from '@monaco-editor/react';
 import { servicesApi } from '../services/api';
+import { buildODataKeyPath, type ODataKeyField } from '../services/odataKey';
 import FilterDialog from './FilterDialog';
 
 interface EntityTesterProps {
   serviceName: string;
   serviceVersion?: string;
   entities?: string[];
-}
-
-interface KeyField {
-  name: string;
-  value: string;
 }
 
 interface QueryHistory {
@@ -528,7 +524,7 @@ const GetEntitySetTester = ({ serviceName, serviceVersion, entities }: { service
 const GetEntityTester = ({ serviceName, serviceVersion, entities }: { serviceName: string; serviceVersion?: string; entities: string[] }) => {
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
   const [entityFields, setEntityFields] = useState<Array<{ name: string; type: string; nullable?: string }>>([]);
-  const [keyFields, setKeyFields] = useState<KeyField[]>([{ name: '', value: '' }]);
+  const [keyFields, setKeyFields] = useState<ODataKeyField[]>([{ name: '', value: '' }]);
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -555,17 +551,8 @@ const GetEntityTester = ({ serviceName, serviceVersion, entities }: { serviceNam
   }, [selectedEntity, serviceName]);
 
   const buildKeyPath = useCallback((): string => {
-    const validKeys = keyFields.filter((k) => k.value.trim());
-    if (validKeys.length === 0) return '';
-    if (validKeys.length === 1 && validKeys[0].name) {
-      return `(${validKeys[0].name}='${validKeys[0].value}')`;
-    }
-    if (validKeys.length === 1 && !keyFields[0].name) {
-      return `('${validKeys[0].value}')`;
-    }
-    const keyParts = validKeys.map((k) => `${k.name}='${k.value}'`);
-    return `(${keyParts.join(',')})`;
-  }, [keyFields]);
+    return buildODataKeyPath(keyFields, entityFields);
+  }, [keyFields, entityFields]);
 
   const handleAddKeyField = () => {
     setKeyFields([...keyFields, { name: '', value: '' }]);
@@ -1141,7 +1128,7 @@ const CreateEntityTester = ({ serviceName, serviceVersion, entities }: { service
 const UpdateEntityTester = ({ serviceName, serviceVersion, entities }: { serviceName: string; serviceVersion?: string; entities: string[] }) => {
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
   const [entityFields, setEntityFields] = useState<Array<{ name: string; type: string; nullable?: string }>>([]);
-  const [keyFields, setKeyFields] = useState<KeyField[]>([{ name: '', value: '' }]);
+  const [keyFields, setKeyFields] = useState<ODataKeyField[]>([{ name: '', value: '' }]);
   const [body, setBody] = useState('{}');
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -1186,14 +1173,8 @@ const UpdateEntityTester = ({ serviceName, serviceVersion, entities }: { service
   };
 
   const buildKeyPath = useCallback((): string => {
-    const validKeys = keyFields.filter((k) => k.value.trim());
-    if (validKeys.length === 0) return '';
-    if (validKeys.length === 1 && validKeys[0].name) {
-      return `(${validKeys[0].name}='${validKeys[0].value}')`;
-    }
-    const keyParts = validKeys.map((k) => `${k.name}='${k.value}'`);
-    return `(${keyParts.join(',')})`;
-  }, [keyFields]);
+    return buildODataKeyPath(keyFields, entityFields);
+  }, [keyFields, entityFields]);
 
   const handleAddKeyField = () => {
     setKeyFields([...keyFields, { name: '', value: '' }]);
@@ -1522,7 +1503,7 @@ const UpdateEntityTester = ({ serviceName, serviceVersion, entities }: { service
 const DeleteEntityTester = ({ serviceName, serviceVersion, entities }: { serviceName: string; serviceVersion?: string; entities: string[] }) => {
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
   const [entityFields, setEntityFields] = useState<Array<{ name: string; type: string; nullable?: string }>>([]);
-  const [keyFields, setKeyFields] = useState<KeyField[]>([{ name: '', value: '' }]);
+  const [keyFields, setKeyFields] = useState<ODataKeyField[]>([{ name: '', value: '' }]);
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1548,14 +1529,8 @@ const DeleteEntityTester = ({ serviceName, serviceVersion, entities }: { service
   }, [selectedEntity, serviceName]);
 
   const buildKeyPath = useCallback((): string => {
-    const validKeys = keyFields.filter((k) => k.value.trim());
-    if (validKeys.length === 0) return '';
-    if (validKeys.length === 1 && validKeys[0].name) {
-      return `(${validKeys[0].name}='${validKeys[0].value}')`;
-    }
-    const keyParts = validKeys.map((k) => `${k.name}='${k.value}'`);
-    return `(${keyParts.join(',')})`;
-  }, [keyFields]);
+    return buildODataKeyPath(keyFields, entityFields);
+  }, [keyFields, entityFields]);
 
   const handleAddKeyField = () => {
     setKeyFields([...keyFields, { name: '', value: '' }]);

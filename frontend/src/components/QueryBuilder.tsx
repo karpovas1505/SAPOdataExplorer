@@ -37,17 +37,13 @@ import {
 } from '@tabler/icons-react';
 import Editor from '@monaco-editor/react';
 import { servicesApi } from '../services/api';
+import { buildODataKeyPath, type ODataKeyField } from '../services/odataKey';
 import FilterDialog from './FilterDialog';
 
 interface QueryBuilderProps {
   serviceName: string;
   serviceVersion?: string;
   entities?: string[];
-}
-
-interface KeyField {
-  name: string;
-  value: string;
 }
 
 interface QueryHistory {
@@ -79,7 +75,7 @@ const QueryBuilder = ({ serviceName, serviceVersion, entities = [] }: QueryBuild
   const [method, setMethod] = useState('GET');
   const [queryMode, setQueryMode] = useState<'entityset' | 'entity'>('entityset');
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
-  const [keyFields, setKeyFields] = useState<KeyField[]>([{ name: '', value: '' }]);
+  const [keyFields, setKeyFields] = useState<ODataKeyField[]>([{ name: '', value: '' }]);
   const [customPath, setCustomPath] = useState('');
   const [body, setBody] = useState('{}');
   const [response, setResponse] = useState<any>(null);
@@ -145,17 +141,8 @@ const QueryBuilder = ({ serviceName, serviceVersion, entities = [] }: QueryBuild
 
   const buildKeyPath = useCallback((): string => {
     if (queryMode === 'entityset') return '';
-    const validKeys = keyFields.filter((k) => k.value.trim());
-    if (validKeys.length === 0) return '';
-    if (validKeys.length === 1 && validKeys[0].name) {
-      return `(${validKeys[0].name}='${validKeys[0].value}')`;
-    }
-    if (validKeys.length === 1 && !keyFields[0].name) {
-      return `('${validKeys[0].value}')`;
-    }
-    const keyParts = validKeys.map((k) => `${k.name}='${k.value}'`);
-    return `(${keyParts.join(',')})`;
-  }, [keyFields, queryMode]);
+    return buildODataKeyPath(keyFields, entityFields);
+  }, [keyFields, entityFields, queryMode]);
 
   const buildQueryString = useCallback((): string => {
     const params: string[] = [];

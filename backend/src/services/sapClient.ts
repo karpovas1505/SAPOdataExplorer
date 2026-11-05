@@ -14,6 +14,7 @@ if (fs.existsSync(envLocalPath)) {
 
 import sapConfig from '../config/sap.config';
 import { redactHeaders } from '../utils/sapUrl';
+import { findNodes, getRootNode, parseAdtXml, readXmlText } from '../utils/adtXml';
 
 const logFilePath = path.join(process.cwd(), 'server.log');
 
@@ -36,11 +37,16 @@ const logErrorToConsoleAndFile = (message: string) => {
 };
 
 class SapClient {
+  private static readonly SERVICES_CACHE_TTL_MS = 5 * 60 * 1000;
+
   private client: AxiosInstance;
   private backendClient: AxiosInstance; // For ABAP source code from backend system
   private csrfToken: string | null = null;
   private csrfTokenUrl: string | null = null;
   private sessionCookies: string | null = null;
+  private servicesCache: any[] | null = null;
+  private servicesCacheAt = 0;
+  private servicesRequest: Promise<any[]> | null = null;
 
   constructor() {
     // Gateway client for OData services
@@ -191,13 +197,49 @@ class SapClient {
     }
   }
 
-  async getServices(search?: string) {
-    const url = `${sapConfig.catalogService}/ServiceCollection`;
-    const response = await this.client.get(url);
-    let services = response.data?.d?.results || [];
-    
+  private async loadServices(forceRefresh = false): Promise<any[]> {
+    const now = Date.now();
+    const cacheIsFresh =
+      this.servicesCache !== null &&
+      now - this.servicesCacheAt < SapClient.SERVICES_CACHE_TTL_MS;
 
-    
+    if (!forceRefresh && cacheIsFresh) {
+      return this.servicesCache as any[];
+    }
+
+    if (!forceRefresh && this.servicesRequest) {
+      return this.servicesRequest;
+    }
+
+    const request = this.client
+      .get(`${sapConfig.catalogService}/ServiceCollection`)
+      .then((response) => {
+        const services = response.data?.d?.results;
+        const result = Array.isArray(services) ? services : [];
+        this.servicesCache = result;
+        this.servicesCacheAt = Date.now();
+        return result;
+      });
+
+    this.servicesRequest = request;
+
+    try {
+      return await request;
+    } finally {
+      if (this.servicesRequest === request) {
+        this.servicesRequest = null;
+      }
+    }
+  }
+
+  invalidateServicesCache(): void {
+    this.servicesCache = null;
+    this.servicesCacheAt = 0;
+  }
+
+  async getServices(search?: string, forceRefresh = false) {
+    let services = await this.loadServices(forceRefresh);
+
     // Filter only custom services (starting with Z or z, or /IWFND/)
     services = services.filter((service: any) => {
       const name = service.TechnicalServiceName || '';
@@ -222,12 +264,17 @@ class SapClient {
 
   async getServiceMetadata(serviceName: string, version?: string) {
     const services = await this.getServices();
-    const service = services.find((s: any) => {
+    const matches = services.filter((s: any) => {
       // Match by technical name, title, or external name
       return s.TechnicalServiceName === serviceName || 
              s.Title === serviceName || 
              s.ExternalName === serviceName;
     });
+
+    // Prefer the exact service version when several catalog entries share a name.
+    const service = version
+      ? matches.find((s: any) => String(s.TechnicalServiceVersion) === String(version)) ?? matches[0]
+      : matches[0];
     
     if (!service || !service.MetadataUrl) {
       throw new Error(`Service "${serviceName}" not found or has no MetadataUrl`);
@@ -297,23 +344,18 @@ class SapClient {
       // Parse XML to extract package and other metadata
       const xml = response.data;
       logToConsoleAndFile(`XML Response (first 2000 chars): ${xml.substring(0, 2000)}`);
-      
-      // Extract package from packageRef element: <adtcore:packageRef ... adtcore:name="PACKAGENAME"/>
-      const packageRefMatch = xml.match(/<[^>]*packageRef[^>]*[\w:]+name="([^"]+)"/);
-      // Handle both namespaced and non-namespaced attributes for other fields
-      const descriptionMatch = xml.match(/[\w:]+description="([^"]*)"/);
-      const createdByMatch = xml.match(/[\w:]+createdBy="([^"]+)"/);
-      const createdAtMatch = xml.match(/[\w:]+createdAt="([^"]+)"/);
-      const changedByMatch = xml.match(/[\w:]+changedBy="([^"]+)"/);
-      const changedAtMatch = xml.match(/[\w:]+changedAt="([^"]+)"/);
+
+      const parsed = parseAdtXml(xml);
+      const root = getRootNode(parsed);
+      const packageRef = findNodes(parsed, 'packageRef')[0];
 
       const metadata = {
-        packageName: packageRefMatch ? packageRefMatch[1] : 'Unknown',
-        description: descriptionMatch ? descriptionMatch[1] : '',
-        createdBy: createdByMatch ? createdByMatch[1] : '',
-        createdAt: createdAtMatch ? createdAtMatch[1] : '',
-        changedBy: changedByMatch ? changedByMatch[1] : '',
-        changedAt: changedAtMatch ? changedAtMatch[1] : '',
+        packageName: readXmlText(packageRef?.name) || 'Unknown',
+        description: readXmlText(root?.description),
+        createdBy: readXmlText(root?.createdBy),
+        createdAt: readXmlText(root?.createdAt),
+        changedBy: readXmlText(root?.changedBy),
+        changedAt: readXmlText(root?.changedAt),
       };
 
       logToConsoleAndFile(`Package: ${metadata.packageName}`);
@@ -385,26 +427,31 @@ class SapClient {
       logToConsoleAndFile(`XML First 2000 chars: ${xml.substring(0, 2000)}`);
 
       const objects: Array<{ name: string; type: string; description: string; uri: string }> = [];
-      
-      // Parse SEU_ADT_REPOSITORY_OBJ_NODE elements from the XML (ADT repository nodestructure format)
-      // Format: <SEU_ADT_REPOSITORY_OBJ_NODE><OBJECT_TYPE>TABL/DT</OBJECT_TYPE><OBJECT_NAME>NAME</OBJECT_NAME>...</SEU_ADT_REPOSITORY_OBJ_NODE>
-      const nodeRegex = /<SEU_ADT_REPOSITORY_OBJ_NODE>(.*?)<\/SEU_ADT_REPOSITORY_OBJ_NODE>/gs;
-      let nodeMatch;
-      while ((nodeMatch = nodeRegex.exec(xml)) !== null) {
-        const nodeContent = nodeMatch[1];
-        
-        const objectTypeMatch = nodeContent.match(/<OBJECT_TYPE>([^<]*)<\/OBJECT_TYPE>/);
-        const objectNameMatch = nodeContent.match(/<OBJECT_NAME>([^<]*)<\/OBJECT_NAME>/);
-        const objectUriMatch = nodeContent.match(/<OBJECT_URI>([^<]*)<\/OBJECT_URI>/);
 
-        if (objectNameMatch && objectTypeMatch) {
-          objects.push({
-            name: objectNameMatch[1],
-            type: objectTypeMatch[1],
-            description: '',
-            uri: objectUriMatch ? objectUriMatch[1] : '',
-          });
-        }
+      // ADT returns the repository tree in a nested asx:abap structure. Parse it
+      // as XML instead of relying on the exact namespace/prefix layout.
+      const parsed = parseAdtXml(xml, ['SEU_ADT_REPOSITORY_OBJ_NODE']);
+      const objectNodes = findNodes(parsed, 'SEU_ADT_REPOSITORY_OBJ_NODE');
+
+      for (const node of objectNodes) {
+        const name = readXmlText(node.OBJECT_NAME);
+        const type = readXmlText(node.OBJECT_TYPE);
+        if (!name || !type) continue;
+
+        const description = readXmlText(
+          node.DESCRIPTION ??
+            node.OBJECT_DESCRIPTION ??
+            node.SHORT_TEXT ??
+            node.description ??
+            ''
+        );
+
+        objects.push({
+          name,
+          type,
+          description,
+          uri: readXmlText(node.OBJECT_URI),
+        });
       }
 
       logToConsoleAndFile(`Found ${objects.length} objects in package`);
@@ -588,28 +635,17 @@ class SapClient {
       });
 
       const xml = response.data;
-      
-      // Parse package from XML
-      const packageMatch = xml.match(/<adtcore:packageRef[^>]*adtcore:name="([^"]+)"/);
-      const packageName = packageMatch ? packageMatch[1] : 'Unknown';
-      
-      // Parse description
-      const descMatch = xml.match(/adtcore:description="([^"]*)"/);
-      const description = descMatch ? descMatch[1] : '';
-      
-      // Parse created/changed info
-      const createdByMatch = xml.match(/adtcore:createdBy="([^"]*)"/);
-      const createdAtMatch = xml.match(/adtcore:createdAt="([^"]*)"/);
-      const changedByMatch = xml.match(/adtcore:changedBy="([^"]*)"/);
-      const changedAtMatch = xml.match(/adtcore:changedAt="([^"]*)"/);
+      const parsed = parseAdtXml(xml);
+      const root = getRootNode(parsed);
+      const packageRef = findNodes(parsed, 'packageRef')[0];
 
       return {
-        packageName,
-        description,
-        createdBy: createdByMatch ? createdByMatch[1] : '',
-        createdAt: createdAtMatch ? createdAtMatch[1] : '',
-        changedBy: changedByMatch ? changedByMatch[1] : '',
-        changedAt: changedAtMatch ? changedAtMatch[1] : '',
+        packageName: readXmlText(packageRef?.name) || 'Unknown',
+        description: readXmlText(root?.description),
+        createdBy: readXmlText(root?.createdBy),
+        createdAt: readXmlText(root?.createdAt),
+        changedBy: readXmlText(root?.changedBy),
+        changedAt: readXmlText(root?.changedAt),
       };
     } catch (error: any) {
       logErrorToConsoleAndFile(`Failed to get object metadata for ${objectName}: ${error.message}`);
