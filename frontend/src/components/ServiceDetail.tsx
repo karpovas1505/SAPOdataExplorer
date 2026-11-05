@@ -67,7 +67,7 @@ const formatXML = (xml: string): string => {
 };
 
 const ServiceDetail = ({ service, onBack }: ServiceDetailProps) => {
-  const [activeTab, setActiveTab] = useState<string | null>('metadata');
+  const [activeTab, setActiveTab] = useState<string | null>('test');
   const { data: metadata, isLoading: metaLoading, isError: metaError } = useServiceMetadata(service.name, service.version);
   const { data: entitiesData, isLoading: entLoading, isError: entError } = useServiceEntities(service.name, service.version);
 
@@ -90,12 +90,35 @@ const ServiceDetail = ({ service, onBack }: ServiceDetailProps) => {
 
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
-          <Tabs.Tab value="metadata">Metadata</Tabs.Tab>
-          <Tabs.Tab value="datamodel">Data Model</Tabs.Tab>
           <Tabs.Tab value="test">Test Entities</Tabs.Tab>
           <Tabs.Tab value="testfn">Test Functions</Tabs.Tab>
           <Tabs.Tab value="pdf" leftSection={<IconFileTypePdf size={14} />}>PDF Tester</Tabs.Tab>
+          <Tabs.Tab value="metadata">Metadata</Tabs.Tab>
+          <Tabs.Tab value="datamodel">Data Model</Tabs.Tab>
         </Tabs.List>
+
+        <Tabs.Panel value="test" pt="md">
+          <EntityTester
+            serviceName={service.name}
+            serviceVersion={service.version}
+            entities={entitiesData?.entities?.map((e: any) => e.name) || []}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="testfn" pt="md">
+          <FunctionImportTester
+            serviceName={service.name}
+            serviceVersion={service.version}
+            functionImports={entitiesData?.functionImports || []}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="pdf" pt="md">
+          <PdfTester
+            serviceName={service.name}
+            entities={entitiesData?.entities?.map((e: any) => e.name) || []}
+          />
+        </Tabs.Panel>
 
         <Tabs.Panel value="metadata" pt="md">
           {metaLoading && (
@@ -262,29 +285,6 @@ const ServiceDetail = ({ service, onBack }: ServiceDetailProps) => {
               </Stack>
             </Stack>
           )}
-        </Tabs.Panel>
-
-        <Tabs.Panel value="test" pt="md">
-          <EntityTester
-            serviceName={service.name}
-            serviceVersion={service.version}
-            entities={entitiesData?.entities?.map((e: any) => e.name) || []}
-          />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="testfn" pt="md">
-          <FunctionImportTester
-            serviceName={service.name}
-            serviceVersion={service.version}
-            functionImports={entitiesData?.functionImports || []}
-          />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="pdf" pt="md">
-          <PdfTester
-            serviceName={service.name}
-            entities={entitiesData?.entities?.map((e: any) => e.name) || []}
-          />
         </Tabs.Panel>
       </Tabs>
 
