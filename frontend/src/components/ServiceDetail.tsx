@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Button,
   Title,
@@ -14,20 +14,16 @@ import {
   Stack,
   Center,
   Box,
-  SimpleGrid,
 } from '@mantine/core';
-import { IconArrowLeft, IconChevronDown, IconPackage, IconCode, IconFileTypePdf } from '@tabler/icons-react';
+import { IconArrowLeft, IconChevronDown, IconFileTypePdf } from '@tabler/icons-react';
 import Editor from '@monaco-editor/react';
 import { ODataService } from '../services/api';
 import {
   useServiceMetadata,
   useServiceEntities,
-  useServiceDetails,
-  useAbapSource,
 } from '../hooks/useServices';
 import EntityTester from './EntityTester';
 import FunctionImportTester from './FunctionImportTester';
-import PackageTreeInline from './PackageTreeInline';
 import PdfTester from './PdfTester';
 
 interface ServiceDetailProps {
@@ -70,38 +66,10 @@ const formatXML = (xml: string): string => {
   }
 };
 
-interface SelectedObject {
-  name: string;
-  type: string;
-}
-
 const ServiceDetail = ({ service, onBack }: ServiceDetailProps) => {
   const [activeTab, setActiveTab] = useState<string | null>('metadata');
-  const [selectedObject, setSelectedObject] = useState<SelectedObject | null>(null);
-  const [packageName, setPackageName] = useState<string>('');
   const { data: metadata, isLoading: metaLoading, isError: metaError } = useServiceMetadata(service.name, service.version);
   const { data: entitiesData, isLoading: entLoading, isError: entError } = useServiceEntities(service.name, service.version);
-  const { data: serviceDetails, isLoading: detailsLoading } = useServiceDetails(service.name);
-  const { data: abapSource, isLoading: sourceLoading, isError: sourceError } = useAbapSource(
-    service.name,
-    selectedObject?.name || '',
-    selectedObject?.type
-  );
-
-  const handleViewSource = (objectName: string, objectType: string = 'CLAS') => {
-    setSelectedObject({ name: objectName, type: objectType });
-  };
-
-  const handleBackToClasses = () => {
-    setSelectedObject(null);
-  };
-
-  // Save package name when DPC_EXT is loaded
-  useEffect(() => {
-    if (abapSource?.metadata?.packageName && abapSource.metadata.packageName !== 'Unknown') {
-      setPackageName(abapSource.metadata.packageName);
-    }
-  }, [abapSource?.metadata?.packageName]);
 
   return (
     <Stack gap="md">
@@ -127,7 +95,6 @@ const ServiceDetail = ({ service, onBack }: ServiceDetailProps) => {
           <Tabs.Tab value="test">Test Entities</Tabs.Tab>
           <Tabs.Tab value="testfn">Test Functions</Tabs.Tab>
           <Tabs.Tab value="pdf" leftSection={<IconFileTypePdf size={14} />}>PDF Tester</Tabs.Tab>
-          <Tabs.Tab value="abap">ABAP Source</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="metadata" pt="md">
@@ -318,138 +285,6 @@ const ServiceDetail = ({ service, onBack }: ServiceDetailProps) => {
             serviceName={service.name}
             entities={entitiesData?.entities?.map((e: any) => e.name) || []}
           />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="abap" pt="md">
-          {detailsLoading ? (
-            <Center py="xl">
-              <Loader size="lg" />
-            </Center>
-          ) : serviceDetails?.abapClasses ? (
-            <SimpleGrid cols={{ base: 1, lg: 4 }} spacing="md" style={{ height: 'calc(100vh - 250px)' }}>
-              {/* Left panel - Package Tree */}
-              <div style={{ height: '100%', minHeight: 500 }}>
-                {packageName ? (
-                  <PackageTreeInline
-                    packageName={packageName}
-                    onSelectObject={(objectName, objectType) => handleViewSource(objectName, objectType)}
-                    selectedObject={selectedObject?.name}
-                  />
-                ) : (
-                  <Card withBorder style={{ height: '100%' }}>
-                    <Stack gap="md" justify="center" style={{ height: '100%' }}>
-                      <Center>
-                        <IconPackage size={48} color="var(--mantine-color-gray-4)" />
-                      </Center>
-                      <Text ta="center" c="dimmed">
-                        Load the DPC_EXT class to view package contents
-                      </Text>
-                      <Center>
-                        <Button 
-                          onClick={() => handleViewSource(serviceDetails.abapClasses.dataProviderExt.name, 'CLAS')}
-                          loading={sourceLoading}
-                        >
-                          Load Package
-                        </Button>
-                      </Center>
-                    </Stack>
-                  </Card>
-                )}
-              </div>
-
-              {/* Right panel - Source Code */}
-              <div style={{ height: '100%', minHeight: 500, gridColumn: 'span 3' }}>
-                {selectedObject ? (
-                  <Card withBorder style={{ height: '100%' }}>
-                    <Stack gap="xs" style={{ height: '100%' }}>
-                      <Group justify="space-between">
-                        <Group gap="xs">
-                          <IconCode size={20} />
-                          <Text fw={600} ff="monospace">{selectedObject.name}</Text>
-                          <Badge size="sm" color="blue">{selectedObject.type}</Badge>
-                        </Group>
-                        <Button 
-                          variant="subtle" 
-                          size="xs" 
-                          onClick={handleBackToClasses}
-                        >
-                          Clear
-                        </Button>
-                      </Group>
-                      
-                      {sourceLoading ? (
-                        <Center style={{ flex: 1 }}>
-                          <Loader size="lg" />
-                        </Center>
-                      ) : sourceError ? (
-                        <Alert color="red" style={{ flex: 1 }}>
-                          <Stack gap="xs">
-                            <Text fw={500}>Failed to load source code</Text>
-                            <Text size="sm">This could mean:</Text>
-                            <ul style={{ margin: 0, paddingLeft: 20 }}>
-                              <li>ADT is not enabled on this SAP system</li>
-                              <li>The class name is incorrect</li>
-                              <li>You don't have authorization</li>
-                            </ul>
-                            <Text size="sm">Try opening in SAP GUI transaction SE80.</Text>
-                          </Stack>
-                        </Alert>
-                      ) : abapSource?.sourceCode ? (
-                        <>
-                          <Group gap="xs">
-                            <Badge color="blue">{abapSource.lines} lines</Badge>
-                            <Badge color="gray">{abapSource.sourceLength} chars</Badge>
-                            {abapSource.metadata?.packageName && (
-                              <Badge color="green">{abapSource.metadata.packageName}</Badge>
-                            )}
-                          </Group>
-                          <div style={{ flex: 1, minHeight: 0 }}>
-                            <Editor
-                              height="100%"
-                              language="abap"
-                              value={abapSource.sourceCode}
-                              options={{
-                                readOnly: true,
-                                minimap: { enabled: true },
-                                fontSize: 12,
-                                wordWrap: 'on',
-                                automaticLayout: true,
-                              }}
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <Center style={{ flex: 1 }}>
-                          <Text c="dimmed">No source code available</Text>
-                        </Center>
-                      )}
-                    </Stack>
-                  </Card>
-                ) : (
-                  <Card withBorder style={{ height: '100%' }}>
-                    <Center style={{ height: '100%' }}>
-                      <Stack gap="md" align="center">
-                        <IconCode size={64} color="var(--mantine-color-gray-4)" />
-                        <Text c="dimmed" ta="center">
-                          Select an object from the package tree to view its source code
-                        </Text>
-                        {serviceDetails?.abapClasses?.dataProviderExt && (
-                          <Button 
-                            onClick={() => handleViewSource(serviceDetails.abapClasses.dataProviderExt.name)}
-                            leftSection={<IconCode size={16} />}
-                          >
-                            Open DPC_EXT
-                          </Button>
-                        )}
-                      </Stack>
-                    </Center>
-                  </Card>
-                )}
-              </div>
-            </SimpleGrid>
-          ) : (
-            <Alert color="yellow">Failed to load service details.</Alert>
-          )}
         </Tabs.Panel>
       </Tabs>
 
