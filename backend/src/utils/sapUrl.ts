@@ -2,7 +2,6 @@ import sapConfig from '../config/sap.config';
 
 const MAX_URL_LENGTH = 2048;
 const ALLOWED_PATH_PREFIX = '/sap/opu/odata/';
-const SENSITIVE_HEADERS = new Set(['set-cookie', 'cookie', 'authorization', 'x-csrf-token']);
 
 export class SapUrlValidationError extends Error {
   constructor(message: string) {
@@ -117,13 +116,4 @@ export function assertSafeSapODataUrl(value: string): string {
   assertSafePath(parsed.pathname);
   // Preserve the original path/query encoding expected by SAP.
   return input;
-}
-
-export function redactHeaders(headers: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(headers || {}).map(([key, value]) => [
-      key,
-      SENSITIVE_HEADERS.has(key.toLowerCase()) ? '<redacted>' : value,
-    ])
-  );
 }

@@ -81,11 +81,6 @@ SAP_USER=your-username
 SAP_PASSWORD=your-password
 SAP_CLIENT=270
 
-# Backend System for ABAP Source Code (optional - if different from Gateway)
-# SAP_BACKEND_HOST=backend.example.com
-# SAP_BACKEND_PORT=8000
-SAP_BACKEND_CLIENT=280
-
 # Server Configuration
 PORT=3001
 NODE_ENV=development
